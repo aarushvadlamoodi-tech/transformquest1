@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransformQuest</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Chakra+Petch:wght@400;600;700&display=swap');
+:root{--bg:#0a0e1a;--surface:#111827;--card:#1a2236;--border:#2a3a5c;--accent:#00f5c4;--accent2:#ff6b6b;--accent3:#ffd93d;--accent4:#c084fc;--text:#e8f0fe;--muted:#6b7fa8;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Chakra Petch',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;background-image:linear-gradient(rgba(0,245,196,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,196,0.04) 1px,transparent 1px);background-size:40px 40px;}
+#app{max-width:1100px;margin:0 auto;padding:20px;}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px;}
+.logo{font-family:'Space Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--accent);}
+.logo span{color:var(--text);}
+.stats-bar{display:flex;gap:20px;align-items:center;}
+.stat{text-align:center;}
+.stat-val{font-family:'Space Mono',monospace;font-size:1.3rem;font-weight:700;color:var(--accent);display:block;}
+.stat-lbl{font-size:0.6rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+.screen{display:none;animation:fadeIn 0.35s ease;}
+.screen.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.menu-hero{text-align:center;padding:30px 0 40px;}
+.menu-hero h1{font-size:clamp(1.8rem,5vw,3rem);font-weight:700;line-height:1.15;margin-bottom:10px;}
+.menu-hero h1 em{font-style:normal;color:var(--accent);}
+.menu-hero p{color:var(--muted);font-size:0.95rem;max-width:480px;margin:0 auto 36px;line-height:1.7;}
+.mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px;}
+.mode-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 20px;cursor:pointer;transition:all 0.2s;text-align:left;position:relative;overflow:hidden;}
+.mode-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ca,var(--accent));transform:scaleX(0);transform-origin:left;transition:transform 0.3s;}
+.mode-card:hover{border-color:var(--accent);transform:translateY(-3px);}
+.mode-card:hover::before{transform:scaleX(1);}
+.mode-icon{font-size:2.2rem;margin-bottom:12px;display:block;}
+.mode-title{font-size:1rem;font-weight:700;margin-bottom:6px;}
+.mode-desc{font-size:0.8rem;color:var(--muted);line-height:1.6;}
+.mode-badge{display:inline-block;font-family:'Space Mono',monospace;font-size:0.6rem;padding:3px 8px;border-radius:4px;margin-top:10px;background:rgba(0,245,196,0.1);color:var(--accent);letter-spacing:1px;}
+.game-layout{display:grid;grid-template-columns:1fr 305px;gap:16px;align-items:start;}
+@media(max-width:700px){.game-layout{grid-template-columns:1fr;}}
+.canvas-wrapper{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;}
+canvas{display:block;width:100%;border-radius:8px;background:#0d1526;cursor:default;}
+.sidebar{display:flex;flex-direction:column;gap:12px;}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;}
+.panel-title{font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.question-text{font-size:0.88rem;line-height:1.7;color:var(--text);margin-bottom:14px;}
+.question-text b{color:var(--accent);}
+.transform-info{background:rgba(0,245,196,0.06);border:1px solid rgba(0,245,196,0.2);border-radius:8px;padding:12px;margin-bottom:14px;font-family:'Space Mono',monospace;font-size:0.78rem;line-height:1.9;display:none;white-space:pre-line;}
+.transform-info .lbl{color:var(--muted);}
+.transform-info .val{color:var(--accent);}
+.choices{display:flex;flex-direction:column;gap:7px;}
+.choice-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Chakra Petch',sans-serif;font-size:0.84rem;cursor:pointer;transition:all 0.18s;text-align:left;display:flex;align-items:center;gap:9px;}
+.choice-btn:hover:not(:disabled){border-color:var(--accent);background:rgba(0,245,196,0.05);}
+.choice-btn.correct{border-color:var(--accent);background:rgba(0,245,196,0.1);color:var(--accent);}
+.choice-btn.wrong{border-color:var(--accent2);background:rgba(255,107,107,0.1);color:var(--accent2);}
+.choice-btn:disabled{cursor:default;}
+.choice-letter{width:24px;height:24px;border-radius:5px;background:var(--border);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:0.7rem;flex-shrink:0;}
+.correct .choice-letter{background:var(--accent);color:var(--bg);}
+.wrong .choice-letter{background:var(--accent2);color:#fff;}
+.feedback{padding:10px 14px;border-radius:8px;font-size:0.82rem;line-height:1.6;display:none;margin-top:8px;}
+.feedback.correct{background:rgba(0,245,196,0.08);border:1px solid rgba(0,245,196,0.3);color:var(--accent);display:block;}
+.feedback.wrong{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);color:#ff9a9a;display:block;}
+.btn{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:1px;padding:11px 22px;border-radius:9px;border:none;cursor:pointer;transition:all 0.18s;}
+.btn-primary{background:var(--accent);color:var(--bg);width:100%;margin-top:10px;}
+.btn-primary:hover{background:#00ddb0;transform:translateY(-1px);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;padding:7px 14px;}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.progress-track{height:4px;background:var(--border);border-radius:2px;margin-bottom:18px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#00bcd4);border-radius:2px;transition:width 0.5s ease;}
+#nextBtn{display:none;}
+.hint-btn{background:none;border:1px dashed var(--border);color:var(--muted);font-family:'Chakra Petch',sans-serif;font-size:0.75rem;padding:7px 12px;border-radius:7px;cursor:pointer;transition:all 0.18s;width:100%;margin-top:7px;}
+.hint-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+.hint-box{background:rgba(255,211,61,0.06);border:1px solid rgba(255,211,61,0.25);border-radius:7px;padding:10px;font-size:0.8rem;color:#f0d070;line-height:1.6;margin-top:7px;display:none;}
+.hint-box.visible{display:block;animation:fadeIn 0.3s ease;}
+.concept-tag{display:inline-block;font-size:0.65rem;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:4px;margin-bottom:12px;font-family:'Space Mono',monospace;}
+.tag-translation{background:rgba(0,245,196,0.12);color:var(--accent);border:1px solid rgba(0,245,196,0.3);}
+.tag-rotation{background:rgba(255,211,61,0.12);color:var(--accent3);border:1px solid rgba(255,211,61,0.3);}
+.tag-reflection{background:rgba(255,107,107,0.12);color:var(--accent2);border:1px solid rgba(255,107,107,0.3);}
+.tag-dilation{background:rgba(192,132,252,0.12);color:var(--accent4);border:1px solid rgba(192,132,252,0.3);}
+.canvas-controls{display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:6px;}
+.canvas-legend{display:flex;gap:10px;font-size:0.7rem;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:4px;color:var(--muted);}
+.legend-dot{width:9px;height:9px;border-radius:2px;}
+.streak-pill{font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--accent3);padding:5px 11px;background:rgba(255,211,61,0.08);border-radius:20px;border:1px solid rgba(255,211,61,0.2);display:none;}
+.score-screen{text-align:center;padding:50px 20px;max-width:580px;margin:0 auto;}
+.score-circle{width:150px;height:150px;border-radius:50%;border:3px solid var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 26px;background:radial-gradient(circle,rgba(0,245,196,0.08) 0%,transparent 70%);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,245,196,0.3)}50%{box-shadow:0 0 0 18px rgba(0,245,196,0)}}
+.score-num{font-family:'Space Mono',monospace;font-size:2.6rem;font-weight:700;color:var(--accent);line-height:1;}
+.score-denom{font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--muted);}
+.score-title{font-size:1.7rem;font-weight:700;margin-bottom:10px;}
+.score-msg{color:var(--muted);font-size:0.9rem;line-height:1.7;margin-bottom:26px;}
+.score-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:26px;}
+.bk-item{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:12px 8px;}
+.bk-val{font-family:'Space Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--accent3);display:block;}
+.bk-lbl{font-size:0.62rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:3px;display:block;}
+.btn-row{display:flex;flex-direction:column;gap:8px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Transform<span>Quest</span></div>
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-val" id="scoreDisplay">0</span><span class="stat-lbl">Score</span></div>
+      <div class="stat"><span class="stat-val" id="qDisplay">—</span><span class="stat-lbl">Progress</span></div>
+      <div class="streak-pill" id="streakPill">🔥 <span id="streakNum">0</span></div>
+    </div>
+  </header>
+
+  <!-- MENU -->
+  <div class="screen active" id="menuScreen">
+    <div class="menu-hero">
+      <h1>Master <em>All</em><br>Transformations</h1>
+      <p>Translations, rotations (around the origin), reflections, and dilations. Identify rules and apply them on a coordinate grid.</p>
+    </div>
+    <div class="mode-grid">
+      <div class="mode-card" style="--ca:#00f5c4" onclick="startGame('identify')">
+        <span class="mode-icon">🔍</span>
+        <div class="mode-title">Identify the Transform</div>
+        <div class="mode-desc">Look at two shapes and name the transformation — including dilation — that maps one to the other.</div>
+        <span class="mode-badge">IDENTIFY</span>
+      </div>
+      <div class="mode-card" style="--ca:#ffd93d" onclick="startGame('apply')">
+        <span class="mode-icon">✏️</span>
+        <div class="mode-title">Apply the Transform</div>
+        <div class="mode-desc">Given a rule, pick which image shows the correct result. Includes rotation angle and dilation scale factor.</div>
+        <span class="mode-badge">APPLY</span>
+      </div>
+      <div class="mode-card" style="--ca:#ff6b6b" onclick="startGame('mixed')">
+        <span class="mode-icon">⚡</span>
+        <div class="mode-title">Mixed Challenge</div>
+        <div class="mode-desc">All four transformation types randomized. Test your full knowledge every round.</div>
+        <span class="mode-badge">MIXED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="gameScreen">
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="game-layout">
+      <div class="canvas-wrapper">
+        <canvas id="gameCanvas" width="520" height="420"></canvas>
+        <div class="canvas-controls">
+          <div class="canvas-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#00f5c4"></div>Original (P)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div>Image (P′)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.2)"></div>Mirror/ref line</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffd93d;border-radius:50%"></div>Center/origin</div>
+          </div>
+          <button class="btn btn-ghost" onclick="goMenu()">← Menu</button>
+        </div>
+      </div>
+      <div class="sidebar">
+        <div class="panel">
+          <div class="panel-title">Question</div>
+          <div id="conceptTag"></div>
+          <div class="question-text" id="questionText"></div>
+          <div class="transform-info" id="transformInfo"></div>
+          <div class="choices" id="choicesContainer"></div>
+          <div class="feedback" id="feedbackBox"></div>
+          <button class="hint-btn" id="hintBtn" onclick="showHint()">💡 Need a hint?</button>
+          <div class="hint-box" id="hintBox"></div>
+          <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="screen" id="resultsScreen">
+    <div class="score-screen">
+      <div class="score-circle">
+        <div class="score-num" id="finalScore">0</div>
+        <div class="score-denom" id="finalDenom">/ 1000</div>
+      </div>
+      <div class="score-title" id="scoreTitle"></div>
+      <div class="score-msg" id="scoreMsg"></div>
+      <div class="score-breakdown">
+        <div class="bk-item"><span class="bk-val" id="bkCorrect">0</span><span class="bk-lbl">Correct</span></div>
+        <div class="bk-item"><span class="bk-val" id="bkStreak">0</span><span class="bk-lbl">Best Streak</span></div>
+        <div class="bk-item"><span class="bk-val" id="bkAcc">0%</span><span class="bk-lbl">Accuracy</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="playAgainBtn">Play Again</button>
+        <button class="btn btn-ghost" onclick="goMenu()">Back to Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const W=520,H=420;
+// Grid unit = 40px. Origin at (W/2, H/2)
+const OX=W/2, OY=H/2, UNIT=40;
+
+let questions=[],currentQ=0,score=0,streak=0,bestStreak=0,correctCount=0;
+let answered=false,gameMode='mixed';
+const TOTAL=10;
+
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+// Convert grid coords to canvas pixels
+const gx=x=>OX+x*UNIT;
+const gy=y=>OY-y*UNIT;
+// Convert canvas pixels to grid
+const cx2g=px=>(px-OX)/UNIT;
+const cy2g=py=>(OY-py)/UNIT;
+
+// ── SHAPES (in grid coords, centered near origin) ──
+function mkTriangle(ox,oy,s){return[[ox,oy+s],[ox+s*.9,oy-s*.55],[ox-s*.9,oy-s*.55]];}
+function mkArrow(ox,oy,s){const r=s*.75;return[[ox,oy+r],[ox+r*.45,oy+.1*r],[ox+r*.18,oy+.1*r],[ox+r*.18,oy-r],[ox-r*.18,oy-r],[ox-r*.18,oy+.1*r],[ox-r*.45,oy+.1*r]];}
+function mkPenta(ox,oy,s){const p=[];for(let i=0;i<5;i++){const a=i/5*Math.PI*2+Math.PI/2;p.push([ox+Math.cos(a)*s,oy+Math.sin(a)*s]);}return p;}
+function mkLShape(ox,oy,s){const r=s*.7;return[[ox-r*.5,oy+r],[ox+r*.15,oy+r],[ox+r*.15,oy-r*.15],[ox+r,oy-r*.15],[ox+r,oy-r],[ox-r*.5,oy-r]];}
+const SHAPES=[mkTriangle,mkArrow,mkPenta,mkLShape];
+
+// ── TRANSFORMS (grid coords) ──
+const translate=(pts,dx,dy)=>pts.map(([x,y])=>[x+dx,y+dy]);
+const rotateOrigin=(pts,a)=>{const c=Math.cos(a),s=Math.sin(a);return pts.map(([x,y])=>[x*c-y*s,x*s+y*c]);};
+const reflectX=pts=>pts.map(([x,y])=>[x,-y]);           // over x-axis
+const reflectY=pts=>pts.map(([x,y])=>[-x,y]);           // over y-axis
+const reflectYeqX=pts=>pts.map(([x,y])=>[y,x]);         // over y=x
+const reflectYeqNegX=pts=>pts.map(([x,y])=>[-y,-x]);    // over y=-x
+const dilate=(pts,k)=>pts.map(([x,y])=>[x*k,y*k]);      // from origin
+
+// ── DRAWING ──
+function drawGrid(){
+  ctx.strokeStyle='rgba(42,58,92,0.5)';ctx.lineWidth=0.5;
+  for(let x=0;x<=W;x+=UNIT){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<=H;y+=UNIT){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.strokeStyle='rgba(60,85,130,1)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(OX,0);ctx.lineTo(OX,H);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,OY);ctx.lineTo(W,OY);ctx.stroke();
+  // Axis labels
+  ctx.font='9px Space Mono,monospace';ctx.fillStyle='rgba(107,127,168,0.55)';ctx.textAlign='center';
+  for(let i=-5;i<=5;i++){if(i===0)continue;ctx.fillText(i,OX+i*UNIT,OY+12);}
+  ctx.textAlign='right';
+  for(let i=-4;i<=4;i++){if(i===0)continue;ctx.fillText(i,OX-4,OY-i*UNIT+4);}
+  // Origin dot
+  ctx.fillStyle='rgba(107,127,168,0.6)';ctx.font='bold 9px Space Mono,monospace';ctx.textAlign='left';
+  ctx.fillText('O',OX+4,OY-4);
+}
+
+const centroid=pts=>[pts.reduce((s,[x])=>s+x,0)/pts.length,pts.reduce((s,[,y])=>s+y,0)/pts.length];
+
+function drawShapeG(gpts,color,label){
+  const px=gpts.map(([x,y])=>[gx(x),gy(y)]);
+  ctx.beginPath();px.forEach(([x,y],i)=>i===0?ctx.moveTo(x,y):ctx.lineTo(x,y));ctx.closePath();
+  ctx.fillStyle=color+'28';ctx.fill();
+  ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();
+  if(label){
+    const[cx,cy]=centroid(px);
+    ctx.font='bold 12px Space Mono,monospace';ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(label,cx,cy);
+  }
+}
+
+function drawDashedLineG(x1,y1,x2,y2,color='rgba(220,220,255,0.22)'){
+  ctx.save();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.setLineDash([7,5]);
+  ctx.beginPath();ctx.moveTo(gx(x1),gy(y1));ctx.lineTo(gx(x2),gy(y2));ctx.stroke();ctx.restore();
+}
+
+function drawDotG(gxv,gyv,color='rgba(255,211,61,0.9)'){
+  ctx.save();ctx.fillStyle=color;ctx.beginPath();ctx.arc(gx(gxv),gy(gyv),5,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+
+function drawArrowLineG(x1,y1,x2,y2){
+  const [px1,py1]=[gx(x1),gy(y1)],[px2,py2]=[gx(x2),gy(y2)];
+  const angle=Math.atan2(py2-py1,px2-px1);
+  ctx.save();ctx.strokeStyle='rgba(255,211,61,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(px1,py1);ctx.lineTo(px2,py2);ctx.stroke();
+  ctx.setLineDash([]);ctx.fillStyle='rgba(255,211,61,0.65)';
+  ctx.translate(px2,py2);ctx.rotate(angle);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-9,-4.5);ctx.lineTo(-9,4.5);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+
+function drawRotArcG(deg){
+  // Draw arc at origin showing rotation direction
+  const r=28;
+  ctx.save();ctx.strokeStyle='rgba(255,211,61,0.55)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+  ctx.beginPath();
+  if(deg>0) ctx.arc(OX,OY,r,0,-deg*Math.PI/180,false);
+  else ctx.arc(OX,OY,r,0,-deg*Math.PI/180,true);
+  ctx.stroke();ctx.restore();
+}
+
+function drawDilationRaysG(gpts,k){
+  ctx.save();ctx.strokeStyle='rgba(192,132,252,0.25)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+  gpts.forEach(([x,y])=>{
+    ctx.beginPath();ctx.moveTo(OX,OY);ctx.lineTo(gx(x*k),gy(y*k));ctx.stroke();
+  });
+  ctx.restore();
+}
+
+// ── IDENTIFY QUESTION ──
+function genIdentify(){
+  const type=pick(['translation','rotation','reflection','dilation']);
+  const mkShape=pick(SHAPES);
+  // Place shape in a grid quadrant, 1–3 units from origin
+  const qx=pick([-1,1]),qy=pick([-1,1]);
+  const ox=qx*rand(1,3), oy=qy*rand(1,3);
+  const sz=rand(1,1.5); // in grid units
+  const original=mkShape(ox,oy,sz);
+  let image,drawExtra=()=>{},hint,explanation;
+
+  if(type==='translation'){
+    const dx=pick([-4,-3,3,4]),dy=pick([-3,-2,2,3]);
+    image=translate(original,dx,dy);
+    const sign=n=>n>0?'+'+n:''+n;
+    hint='Translation: every point moves the same vector (dx, dy). The shape does not rotate or resize.';
+    explanation='Translation by ('+sign(dx)+', '+sign(dy)+'). Each vertex shifted by the same amount.';
+    drawExtra=()=>{const[ocx,ocy]=centroid(original);const[icx,icy]=centroid(image);drawArrowLineG(ocx,ocy,icx,icy);};
+  } else if(type==='rotation'){
+    const degs=pick([90,180,270]);
+    const rad=degs*Math.PI/180;
+    image=rotateOrigin(original,rad);
+    hint='Rotation around the origin: (x,y)→(−y,x) for 90° CCW, (x,y)→(−x,−y) for 180°, (x,y)→(y,−x) for 270° CCW.';
+    explanation='Rotation '+degs+'° CCW around the origin (0,0).';
+    drawExtra=()=>{drawDotG(0,0);drawRotArcG(degs);};
+  } else if(type==='reflection'){
+    const axis=pick(['x-axis','y-axis','y=x','y=-x']);
+    if(axis==='x-axis'){
+      image=reflectX(original);drawExtra=()=>drawDashedLineG(-6,0,6,0);
+      hint='Reflection over x-axis: (x,y)→(x,−y). Points above become below.';
+      explanation='Reflection over the x-axis. Each y-coordinate is negated.';
+    } else if(axis==='y-axis'){
+      image=reflectY(original);drawExtra=()=>drawDashedLineG(0,-5,0,5);
+      hint='Reflection over y-axis: (x,y)→(−x,y). Points on the right become left.';
+      explanation='Reflection over the y-axis. Each x-coordinate is negated.';
+    } else if(axis==='y=x'){
+      image=reflectYeqX(original);drawExtra=()=>drawDashedLineG(-5,-5,5,5);
+      hint='Reflection over y=x: (x,y)→(y,x). Coordinates are simply swapped.';
+      explanation='Reflection over the line y=x. Coordinates x and y are swapped.';
+    } else {
+      image=reflectYeqNegX(original);drawExtra=()=>drawDashedLineG(-5,5,5,-5);
+      hint='Reflection over y=−x: (x,y)→(−y,−x). Both coords swap and negate.';
+      explanation='Reflection over the line y=−x. Rule: (x,y)→(−y,−x).';
+    }
+  } else { // dilation
+    const k=pick([2,3,0.5,0.33]);
+    image=dilate(original,k);
+    const kStr=k===0.33?'1/3':k===0.5?'1/2':String(k);
+    hint='Dilation from the origin multiplies every coordinate by the scale factor k. If k>1, the shape enlarges; if k<1, it shrinks.';
+    explanation='Dilation with scale factor k='+kStr+' from the origin. Every coordinate × '+kStr+'.';
+    drawExtra=()=>{drawDilationRaysG(original,k);drawDotG(0,0,'rgba(192,132,252,0.9)');};
+  }
+
+  const answer=type.charAt(0).toUpperCase()+type.slice(1);
+  const allTypes=['Translation','Rotation','Reflection','Dilation'];
+  const wrong=shuffle(allTypes.filter(x=>x!==answer)).slice(0,3);
+  return{
+    concept:type,
+    draw(){ctx.clearRect(0,0,W,H);drawGrid();drawExtra();drawShapeG(original,'#00f5c4','P');drawShapeG(image,'#ff6b6b',"P'");},
+    questionHTML:'What transformation maps shape <b>P</b> (teal) onto shape <b>P′</b> (red)?',
+    transformInfo:null,
+    choices:shuffle([answer,...wrong]),answer,hint,explanation
+  };
+}
+
+// ── APPLY QUESTION ──
+function genApply(){
+  const type=pick(['translation','rotation','reflection','dilation']);
+  const mkShape=pick(SHAPES);
+  const qx=pick([-1,1]),qy=pick([-1,1]);
+  const ox=qx*rand(1,2),oy=qy*rand(1,2);
+  const sz=rand(1,1.4);
+  const original=mkShape(ox,oy,sz);
+  let correctImage,infoHTML,hint,explanation;
+
+  if(type==='translation'){
+    const dx=pick([-4,-3,3,4]),dy=pick([-3,-2,2,3]);
+    correctImage=translate(original,dx,dy);
+    const sign=n=>n>0?'+'+n:''+n;
+    infoHTML='<span class="lbl">Type: </span><span class="val">Translation</span>\n<span class="lbl">Rule: </span><span class="val">(x, y) → (x'+sign(dx)+', y'+sign(dy)+')</span>';
+    hint='Add the vector to every vertex: x gets '+sign(dx)+', y gets '+sign(dy)+'.';
+    explanation='Correct! Every point shifted by ('+sign(dx)+', '+sign(dy)+').';
+  } else if(type==='rotation'){
+    const degs=pick([90,180,270]);
+    const rad=degs*Math.PI/180;
+    correctImage=rotateOrigin(original,rad);
+    const ruleMap={90:'(x,y) → (−y, x)',180:'(x,y) → (−x, −y)',270:'(x,y) → (y, −x)'};
+    infoHTML='<span class="lbl">Type: </span><span class="val">Rotation — Origin</span>\n<span class="lbl">Angle: </span><span class="val">'+degs+'° CCW</span>\n<span class="lbl">Rule: </span><span class="val">'+ruleMap[degs]+'</span>';
+    hint='Apply the rotation rule to every vertex: '+ruleMap[degs]+'.';
+    explanation='Correct! '+degs+'° CCW rotation around origin. Rule: '+ruleMap[degs]+'.';
+  } else if(type==='reflection'){
+    const axis=pick(['x-axis','y-axis','y=x','y=-x']);
+    const ruleMap={'x-axis':'(x,y) → (x, −y)','y-axis':'(x,y) → (−x, y)','y=x':'(x,y) → (y, x)','y=-x':'(x,y) → (−y, −x)'};
+    if(axis==='x-axis') correctImage=reflectX(original);
+    else if(axis==='y-axis') correctImage=reflectY(original);
+    else if(axis==='y=x') correctImage=reflectYeqX(original);
+    else correctImage=reflectYeqNegX(original);
+    infoHTML='<span class="lbl">Type: </span><span class="val">Reflection</span>\n<span class="lbl">Line: </span><span class="val">'+axis+'</span>\n<span class="lbl">Rule: </span><span class="val">'+ruleMap[axis]+'</span>';
+    hint='Apply '+ruleMap[axis]+' to every vertex.';
+    explanation='Correct! Reflection over '+axis+'. Rule: '+ruleMap[axis]+'.';
+  } else {
+    const k=pick([2,3,0.5]);
+    correctImage=dilate(original,k);
+    const kStr=k===0.5?'1/2':String(k);
+    infoHTML='<span class="lbl">Type: </span><span class="val">Dilation</span>\n<span class="lbl">Center: </span><span class="val">Origin (0, 0)</span>\n<span class="lbl">Scale factor: </span><span class="val">k = '+kStr+'</span>\n<span class="lbl">Rule: </span><span class="val">(x, y) → ('+kStr+'x, '+kStr+'y)</span>';
+    hint='Multiply every coordinate by k='+kStr+'. The shape '+(k>1?'enlarges':'shrinks')+' from the origin.';
+    explanation='Correct! Dilation k='+kStr+' from origin. Every coordinate × '+kStr+'.';
+  }
+
+  // Build 3 distinct wrong answers
+  const wrongPool=[
+    rotateOrigin(original,Math.PI/2+(Math.random()*0.4-0.2)),
+    dilate(original,type==='dilation'?3:0.5),
+    translate(original,rand(2,4)*pick([-1,1]),rand(2,4)*pick([-1,1])),
+    reflectX(original),
+    reflectY(original),
+  ].filter(w=>JSON.stringify(w)!==JSON.stringify(correctImage));
+  const wrongOpts=shuffle(wrongPool).slice(0,3);
+
+  const answerIdx=rand(0,3);
+  const options=[];let wi=0;
+  for(let i=0;i<4;i++) options.push(i===answerIdx?correctImage:wrongOpts[wi++]);
+  const labels=['A','B','C','D'];
+
+  // Spread options across four quadrant zones on canvas
+  const zones=[[-3.5,-2.5],[ 3.5,-2.5],[-3.5, 2.5],[ 3.5, 2.5]]; // grid centers
+
+  return{
+    concept:type,
+    draw(){
+      ctx.clearRect(0,0,W,H);drawGrid();
+      drawShapeG(original,'#00f5c4','P');
+      options.forEach((pts,i)=>{
+        const[zx,zy]=zones[i];
+        const[pcx,pcy]=centroid(pts);
+        const shifted=translate(pts,zx-pcx,zy-pcy);
+        drawShapeG(shifted,'#ff6b6b',labels[i]);
+      });
+    },
+    questionHTML:'Which image (A–D) correctly shows the result of the transformation applied to <b>P</b>?',
+    transformInfo:infoHTML,
+    choices:labels.slice(0,4),answer:labels[answerIdx],hint,explanation
+  };
+}
+
+// ── BUILD SET ──
+function buildQuestions(mode){
+  const qs=[];
+  for(let i=0;i<TOTAL;i++){
+    if(mode==='identify') qs.push(genIdentify());
+    else if(mode==='apply') qs.push(genApply());
+    else qs.push(Math.random()<0.5?genIdentify():genApply());
+  }
+  return qs;
+}
+
+// ── GAME FLOW ──
+function startGame(mode){
+  gameMode=mode;questions=buildQuestions(mode);
+  currentQ=0;score=0;streak=0;bestStreak=0;correctCount=0;
+  showScreen('gameScreen');loadQuestion();
+}
+
+function loadQuestion(){
+  if(currentQ>=TOTAL){showResults();return;}
+  answered=false;
+  const q=questions[currentQ];
+  document.getElementById('progressFill').style.width=(currentQ/TOTAL*100)+'%';
+  document.getElementById('qDisplay').textContent=(currentQ+1)+'/'+TOTAL;
+  // Concept tag — hidden until answer
+  const tagEl=document.getElementById('conceptTag');
+  tagEl.className='concept-tag tag-'+q.concept;
+  tagEl.textContent=q.concept.toUpperCase();
+  tagEl.style.visibility='hidden';
+  document.getElementById('questionText').innerHTML=q.questionHTML;
+  const infoEl=document.getElementById('transformInfo');
+  if(q.transformInfo){infoEl.innerHTML=q.transformInfo;infoEl.style.display='block';infoEl.style.filter='blur(6px)';infoEl.style.userSelect='none';}
+  else infoEl.style.display='none';
+  // Choices
+  const cont=document.getElementById('choicesContainer');cont.innerHTML='';
+  const letters=['A','B','C','D'];
+  q.choices.forEach((c,i)=>{
+    const btn=document.createElement('button');btn.className='choice-btn';
+    btn.innerHTML='<span class="choice-letter">'+letters[i]+'</span>'+c;
+    btn.onclick=()=>handleAnswer(c,btn);cont.appendChild(btn);
+  });
+  document.getElementById('feedbackBox').className='feedback';document.getElementById('feedbackBox').textContent='';
+  document.getElementById('hintBox').className='hint-box';document.getElementById('hintBox').textContent='';
+  document.getElementById('hintBtn').style.display='block';
+  document.getElementById('nextBtn').style.display='none';
+  q.draw();
+}
+
+function handleAnswer(choice,btn){
+  if(answered)return;answered=true;
+  const q=questions[currentQ];const correct=choice===q.answer;
+  document.querySelectorAll('.choice-btn').forEach(b=>b.disabled=true);
+  if(correct){
+    btn.classList.add('correct');score+=streak>=2?150:100;correctCount++;streak++;
+    if(streak>bestStreak)bestStreak=streak;
+    document.getElementById('feedbackBox').className='feedback correct';
+    document.getElementById('feedbackBox').textContent='✓ '+q.explanation;
+  } else {
+    btn.classList.add('wrong');streak=0;
+    document.querySelectorAll('.choice-btn').forEach(b=>{if(b.textContent.slice(1).trim()===q.answer)b.classList.add('correct');});
+    document.getElementById('feedbackBox').className='feedback wrong';
+    document.getElementById('feedbackBox').textContent='✗ Not quite. '+q.explanation;
+  }
+  document.getElementById('scoreDisplay').textContent=score;
+  document.getElementById('hintBtn').style.display='none';
+  // Reveal concept tag + transform info
+  document.getElementById('conceptTag').style.visibility='visible';
+  const infoEl=document.getElementById('transformInfo');
+  if(infoEl.style.display!=='none'){infoEl.style.filter='';infoEl.style.userSelect='';}
+  const pill=document.getElementById('streakPill');
+  if(streak>=2){pill.style.display='flex';document.getElementById('streakNum').textContent=streak;}
+  else pill.style.display='none';
+  document.getElementById('nextBtn').style.display='block';
+}
+
+function showHint(){
+  const q=questions[currentQ];
+  const hb=document.getElementById('hintBox');hb.textContent='💡 '+q.hint;hb.classList.add('visible');
+  document.getElementById('hintBtn').style.display='none';
+}
+
+function nextQuestion(){currentQ++;loadQuestion();}
+
+function showResults(){
+  showScreen('resultsScreen');
+  document.getElementById('finalScore').textContent=score;
+  document.getElementById('finalDenom').textContent='/ '+(TOTAL*100);
+  document.getElementById('bkCorrect').textContent=correctCount;
+  document.getElementById('bkStreak').textContent=bestStreak;
+  document.getElementById('bkAcc').textContent=Math.round(correctCount/TOTAL*100)+'%';
+  const pct=correctCount/TOTAL;
+  let title,msg;
+  if(pct>=0.9){title='Transformation Master! 🏆';msg='Incredible! You nailed translations, rotations, reflections, and dilations.';}
+  else if(pct>=0.7){title='Great Work! 🎯';msg='Strong understanding overall. Review the types you missed.';}
+  else if(pct>=0.5){title='Good Effort! 📐';msg='Solid start. Keep practicing — especially dilations and rotation rules.';}
+  else{title='Keep Practicing! 💪';msg='Review the coordinate rules for each transformation and try again!';}
+  document.getElementById('scoreTitle').textContent=title;
+  document.getElementById('scoreMsg').textContent=msg;
+  document.getElementById('playAgainBtn').onclick=()=>startGame(gameMode);
+  document.getElementById('streakPill').style.display='none';
+}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function goMenu(){showScreen('menuScreen');document.getElementById('scoreDisplay').textContent='0';document.getElementById('qDisplay').textContent='—';document.getElementById('streakPill').style.display='none';}
+
+ctx.clearRect(0,0,W,H);drawGrid();
+</script>
+</body>
+</html>
